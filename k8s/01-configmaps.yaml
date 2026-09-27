@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: aiops
+  labels:
+    app.kubernetes.io/name: aiops-backend
+    app.kubernetes.io/part-of: aiops-platform
+data:
+  APP_NAME: "aiops-backend"
+  APP_ENV: "production"
+  PORT: "8000"
+  LOG_LEVEL: "INFO"
+  ENABLE_CHAOS: "true"
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "aiops_db"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
