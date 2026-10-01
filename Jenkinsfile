@@ -18,10 +18,7 @@ pipeline {
             steps {
                 dir('backend') {
                     sh '''
-                        python3 -m venv venv || true
-                        . venv/bin/activate
-                        pip install -r requirements.txt
-                        pytest tests/ || echo "Tests completed"
+                        docker run --rm -v $(pwd):/app -w /app python:3.11-slim sh -c "pip install --no-cache-dir -r requirements.txt && pytest tests/ || echo 'Tests completed'"
                     '''
                 }
             }
