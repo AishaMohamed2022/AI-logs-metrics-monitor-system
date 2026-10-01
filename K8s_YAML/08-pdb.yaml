@@ -1,0 +1,34 @@
+# =============================================================================
+# 08-pdb.yaml
+# PodDisruptionBudget: voluntary disruptions (node drain, upgrade, kubectl
+# drain) can never take ALL backend pods offline at once.
+# minAvailable: 1 guarantees at least 1 serving pod always survives.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: aiops-backend-pdb
+  namespace: dev
+  labels:
+    app.kubernetes.io/name: aiops-backend
+    app.kubernetes.io/part-of: aiops-platform
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aiops-backend
+---
+# PDB for the database pod (1 replica -> blocks drain unless --force / --ignore-daemonsets)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: aiops-postgres-pdb
+  namespace: dev
+  labels:
+    app.kubernetes.io/name: aiops-postgres
+    app.kubernetes.io/part-of: aiops-platform
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aiops-postgres

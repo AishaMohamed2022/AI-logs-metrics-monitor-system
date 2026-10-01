@@ -1,0 +1,54 @@
+# =============================================================================
+# 07-hpa.yaml
+# HorizontalPodAutoscaler - scales the Deployment's ReplicaSet between 2 and 6
+# replicas based on average CPU utilization.
+#
+# REQUIRES metrics-server (kubectl apply -f
+#   https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml)
+# Verify with: kubectl top nodes / kubectl top pods
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: aiops-backend-hpa
+  namespace: dev
+  labels:
+    app.kubernetes.io/name: aiops-backend
+    app.kubernetes.io/part-of: aiops-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: aiops-backend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 2
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60

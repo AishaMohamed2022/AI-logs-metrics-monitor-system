@@ -1,0 +1,78 @@
+# =============================================================================
+# 00-namespaces.yaml
+# Three isolated namespaces: dev, operations, testing
+# Each namespace gets a LimitRange so any pod without explicit resources still
+# gets sane default requests/limits (isolation guardrail).
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+  labels:
+    app.kubernetes.io/part-of: aiops-platform
+    environment: dev
+    istio-injection: disabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: operations
+  labels:
+    app.kubernetes.io/part-of: aiops-platform
+    environment: operations
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: testing
+  labels:
+    app.kubernetes.io/part-of: aiops-platform
+    environment: testing
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: dev-default-limits
+  namespace: dev
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: operations-default-limits
+  namespace: operations
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: testing-default-limits
+  namespace: testing
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 250m
+        memory: 256Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi

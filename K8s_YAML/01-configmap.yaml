@@ -1,0 +1,29 @@
+# =============================================================================
+# 01-configmap.yaml
+# Non-sensitive application configuration (12-factor style, no secrets here).
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: dev
+  labels:
+    app.kubernetes.io/name: aiops-backend
+    app.kubernetes.io/part-of: aiops-platform
+data:
+  APP_NAME: "aiops-backend"
+  APP_ENV: "development"
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  LOG_LEVEL: "INFO"
+  ENABLE_CHAOS: "true"
+  PROMETHEUS_METRICS_PATH: "/metrics"
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "5"
+  DB_POOL_TIMEOUT: "10"
+  REDIS_SOCKET_TIMEOUT: "5"
+  POSTGRES_HOST: "aiops-postgres.dev.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "aiops_db"
+  REDIS_HOST: "aiops-redis.dev.svc.cluster.local"
+  REDIS_PORT: "6379"
