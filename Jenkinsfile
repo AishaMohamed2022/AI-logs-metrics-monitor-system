@@ -1,10 +1,16 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+
     environment {
-        DOCKER_IMAGE = 'mariamas32/aiops-backend'
+        DOCKER_IMAGE    = 'mariamas32/aiops-backend'
         DOCKER_CREDS_ID = 'docker-registry-creds'
-        K8S_NAMESPACE = 'aiops'
+        K8S_NAMESPACE   = 'aiops'
+        K8S_DIR         = 'K8s_YAML'
     }
 
     stages {
@@ -16,11 +22,15 @@ pipeline {
 
         stage('Run Unit Tests') {
             steps {
-                dir('backend') {
-                    sh '''
-                        docker run --rm -v $(pwd):/app -w /app python:3.11-slim sh -c "pip install --no-cache-dir -r requirements.txt && pytest tests/ || echo 'Tests completed'"
-                    '''
-                }
+                // --volumes-from: the docker daemon runs on the host, so a plain
+                // "-v $(pwd):/app" would mount a host path that does not exist.
+                // Sharing the Jenkins container's volumes makes the workspace visible.
+                // No "|| echo": a failing test must fail the build.
+                sh '''
+                    docker run --rm --volumes-from jenkins-server \
+                        -w "$WORKSPACE/backend" python:3.11-slim \
+                        sh -c "pip install --no-cache-dir -r requirements.txt && pytest tests/"
+                '''
             }
         }
 
@@ -34,6 +44,8 @@ pipeline {
                             appImage.push('latest')
                         }
                     }
+                    // keep the VM disk from filling up with old images
+                    sh "docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER} || true"
                 }
             }
         }
@@ -42,8 +54,8 @@ pipeline {
             steps {
                 sh '''
                     kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-                    sed -i "s|image: .*|image: ${DOCKER_IMAGE}:${BUILD_NUMBER}|g" K8s_YAML/05-backend-deployment.yaml
-                    kubectl apply -f K8s_YAML/ -n ${K8S_NAMESPACE}
+                    sed -i "s|image: .*|image: ${DOCKER_IMAGE}:${BUILD_NUMBER}|g" ${K8S_DIR}/05-backend-deployment.yaml
+                    kubectl apply -f ${K8S_DIR}/ -n ${K8S_NAMESPACE}
                 '''
             }
         }
@@ -51,14 +63,21 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                    kubectl rollout status deployment/backend-deployment -n ${K8S_NAMESPACE} --timeout=60s
+                    kubectl rollout status deployment/aiops-backend -n ${K8S_NAMESPACE} --timeout=180s
                 '''
             }
         }
     }
 
     post {
-        always {
+        failure {
+            // shows why a rollout failed (ImagePullBackOff, CrashLoopBackOff, ...)
+            sh '''
+                kubectl get pods -n ${K8S_NAMESPACE} || true
+                kubectl describe pods -n ${K8S_NAMESPACE} | tail -60 || true
+            '''
+        }
+        cleanup {
             cleanWs()
         }
     }
