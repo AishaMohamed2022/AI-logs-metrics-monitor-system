@@ -2,31 +2,18 @@ import os
 import sys
 from pathlib import Path
 
-# 1. إضافة فولدر backend للـ Python Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-# 2. تعيين قاعدة البيانات للتستات لتكون SQLite in-memory
+# 1. تعيين قاعدة البيانات للتستات لتكون SQLite in-memory قبل استيراد أي موديل أو داتابيز
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
+# 2. إضافة فولدر backend للـ Python Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
-import app.database as db_module
+import app.models  # noqa: F401 (registers Order on Base.metadata)
+from app.database import Base, engine
 
-# إنشاء Engine خاص بالـ Tests يعتمد على SQLite في الذاكرة
-test_engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-
-# استبدال الـ engine الرئيسي بـ engine التستات
-db_module.engine = test_engine
-
-@pytest.fixture(autouse=True)
-def setup_test_database():
-    # إنشاء الجداول قبل كل تست
-    db_module.Base.metadata.create_all(bind=test_engine)
+@pytest.fixture(scope="session", autouse=True)
+def create_test_db():
+    Base.metadata.create_all(bind=engine)
     yield
-    # مسح الجداول بعد ما التست يخلص
-    db_module.Base.metadata.drop_all(bind=test_engine)
+    Base.metadata.drop_all(bind=engine)
